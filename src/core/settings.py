@@ -14,6 +14,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 import os
+from supabase import create_client
 
 load_dotenv()
 
@@ -35,6 +36,25 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+ENCRYPTED_MODEL_FIELDS_KEY = os.environ["ENCRYPTED_MODEL_FIELDS_KEY"]
+FIELD_ENCRYPTION_KEY = os.environ["ENCRYPTED_MODEL_FIELDS_KEY"]
+SUPABASE_URL = os.getenv("SUPABASE_API_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_JWT_KEY_SERVICE_ROLE") 
+
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+# Sign in user (email + password)
+# response = supabase.auth.sign_in_with_password({
+#     "email": "peter@petervandoorn.com",
+#     "password": os.environ["TEST_USER_PASSWORD"]
+# })
+
+# if response.user:
+#     jwt_token = response.session.access_token
+#     print("JWT Token:", jwt_token)
+# else:
+#     print("Failed to authenticate:", response)
+
 
 # Application definition
 
@@ -45,6 +65,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_cryptography',
+    'rest_framework',
+    'drf_spectacular',
+    'users',
+    'emails',
+    'email_integrations',
 ]
 
 MIDDLEWARE = [
@@ -53,7 +79,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'core.supabase_auth_middleware.SupabaseAuthMiddleware',  # add here
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -105,6 +130,30 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "core.authentication.SupabaseJWTAuthentication",
+    ],
+}
+
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "PostFach API",
+    "DESCRIPTION": "API docs",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SECURITY": [{"BearerAuth": []}],  # applies globally
+    "COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
