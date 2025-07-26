@@ -20,8 +20,6 @@ class ContactUpdateSerializer(serializers.ModelSerializer):
         ]
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    contacts = ContactSerializer(many=True, read_only=True)
-
     class Meta:
         model = UserProfile
-        fields = ['id', 'first_name', 'last_name', 'public_username', 'contacts']
+        fields = ['id', 'first_name', 'last_name', 'public_username']
