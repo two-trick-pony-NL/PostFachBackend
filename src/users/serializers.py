@@ -5,7 +5,7 @@ from .models import UserProfile, Contact
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
-        fields = ['id', 'email', 'first_name', 'last_name','always_notify', 'muted', 'marked_as_spam',
+        fields = ['id', 'email', 'display_name','always_notify', 'muted', 'marked_as_spam',
             'important', 'whitelist'
         ]
         
@@ -14,7 +14,7 @@ class ContactUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = [
-            'first_name', 'last_name',
+            'display_name',
             'always_notify', 'muted', 'marked_as_spam',
             'important', 'whitelist'
         ]
