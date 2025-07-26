@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions
 from rest_framework import status
+from emails.serializers import EmailSerializer
+from emails.models import Email
 from .models import UserProfile, Contact
 from .serializers import UserProfileSerializer, ContactSerializer, ContactUpdateSerializer
 
@@ -49,3 +51,19 @@ class ContactListView(generics.ListAPIView):
     def get_queryset(self):
         return Contact.objects.filter(owner__id=self.request.user.id)
 
+
+class ContactEmailsListView(generics.ListAPIView):
+    serializer_class = EmailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user_profile = UserProfile.objects.get(id=self.request.user.id)
+        contact_id = self.kwargs['contact_id']
+        return Email.objects.filter(
+            owner=user_profile
+        ).filter(
+            from_contact__id=contact_id
+        ) | Email.objects.filter(
+            owner=user_profile,
+            to_contacts__id=contact_id
+        )
