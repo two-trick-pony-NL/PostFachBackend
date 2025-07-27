@@ -1,13 +1,11 @@
 # core/authentication.py
-from django.contrib.auth.models import AnonymousUser
-from rest_framework import authentication, exceptions
-from supabase import create_client
-import os
 import jwt
+from jwt import PyJWKClient
+from rest_framework import authentication, exceptions
+from core.settings import SUPABASE_JWKS_URL
 
-SUPABASE_URL = os.getenv("SUPABASE_API_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_JWT_KEY_SERVICE_ROLE")
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+jwks_client = PyJWKClient(SUPABASE_JWKS_URL)
+
 
 class SupabaseUser:
     def __init__(self, user_id, email):
@@ -23,19 +21,24 @@ class SupabaseJWTAuthentication(authentication.BaseAuthentication):
 
         token = auth_header.split(" ")[1]
         try:
-            # Decode JWT without verifying signature to extract user info first
-            decoded = jwt.decode(token, options={"verify_signature": False})
+            # Get the signing key from JWKS
+            signing_key = jwks_client.get_signing_key_from_jwt(token).key
+
+            # Decode and verify signature + claims
+            decoded = jwt.decode(
+                token,
+                signing_key,
+                algorithms=["ES256"],
+                audience="authenticated",
+                issuer="https://tnbzfgbtnaatfpiehplp.supabase.co/auth/v1"
+            )
+
             user_id = decoded.get("sub")
             email = decoded.get("email")
+            if not user_id or not email:
+                raise exceptions.AuthenticationFailed("Invalid token payload")
 
-            # Verify token with Supabase
-            response = supabase.auth.get_user(token)
-            if not response.user or response.user.id != user_id:
-                raise exceptions.AuthenticationFailed("Invalid token or user")
-
-            user = SupabaseUser(user_id=user_id, email=email)
-            return (user, token)
+            return (SupabaseUser(user_id, email), token)
 
         except Exception as e:
             raise exceptions.AuthenticationFailed(f"Invalid token: {str(e)}")
-

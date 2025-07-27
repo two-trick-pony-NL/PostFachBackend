@@ -8,6 +8,10 @@ class EmailThread(models.Model):
     owner = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='email_threads')
     subject = models.CharField(max_length=512)
     created_at = models.DateTimeField(auto_now_add=True)
+    muted = models.BooleanField(
+        default=False,
+        help_text="Whether this whole thread was muted"
+    )
 
     def __str__(self):
         return f"Thread: {self.subject} ({self.id})"

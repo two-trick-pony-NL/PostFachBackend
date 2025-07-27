@@ -18,8 +18,7 @@ from supabase import create_client
 
 load_dotenv()
 
-#Constants
-SUPABASE_JWT_KEY_SERVICE_ROLE = os.getenv("SUPABASE_JWT_KEY_SERVICE_ROLE")
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,6 +39,8 @@ ENCRYPTED_MODEL_FIELDS_KEY = os.environ["ENCRYPTED_MODEL_FIELDS_KEY"]
 FIELD_ENCRYPTION_KEY = os.environ["ENCRYPTED_MODEL_FIELDS_KEY"]
 SUPABASE_URL = os.getenv("SUPABASE_API_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_JWT_KEY_SERVICE_ROLE") 
+SUPABASE_JWKS_URL = os.getenv("SUPABASE_JWKS_URL")
+
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -51,7 +52,9 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # if response.user:
 #     jwt_token = response.session.access_token
-#     print("JWT Token:", jwt_token)
+#     print("Authenticated successfully!\n\n")
+#     print("Bearer", jwt_token)
+#     print("\n\n")    
 # else:
 #     print("Failed to authenticate:", response)
 
