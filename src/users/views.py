@@ -7,11 +7,16 @@ from emails.serializers import EmailSerializer
 from emails.models import Email
 from .models import UserProfile, Contact
 from .serializers import UserProfileSerializer, ContactSerializer, ContactUpdateSerializer
+from emails.tasks import process_incoming_email
+import django_rq
+
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        queue = django_rq.get_queue('default')
+        queue.enqueue(process_incoming_email, "Hello from background task")
         request.user.id  # adjust if different
         try:
             profile = UserProfile.objects.get(id=request.user.id)

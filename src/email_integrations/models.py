@@ -14,16 +14,20 @@ class BaseEmailIntegration(models.Model):
         abstract = True
 
 class GmailIntegration(BaseEmailIntegration):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="gmail_integrations")
     access_token = EncryptedTextField()
     refresh_token = EncryptedTextField()
     token_expiry = models.DateTimeField()
+    
+    # Watch info
+    watch_channel_id = models.CharField(max_length=255, blank=True, null=True)
+    watch_resource_id = models.CharField(max_length=255, blank=True, null=True)
+    watch_expiration = models.BigIntegerField(blank=True, null=True)
+    watch_topic_name = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Gmail: {self.email}"
 
 class OutlookIntegration(BaseEmailIntegration):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="outlook_integrations")
     access_token = EncryptedTextField()
     refresh_token = EncryptedTextField()
     tenant_id = EncryptedCharField(max_length=255)
@@ -33,7 +37,6 @@ class OutlookIntegration(BaseEmailIntegration):
         return f"Outlook: {self.email}"
 
 class ImapIntegration(BaseEmailIntegration):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="imap_integrations")
     # IMAP connection
     server = EncryptedCharField(max_length=255)
     port = models.PositiveIntegerField()

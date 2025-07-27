@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'django_cryptography',
     'rest_framework',
     'drf_spectacular',
+    "django_rq",
     'users',
     'emails',
     'email_integrations',
@@ -139,7 +140,44 @@ REST_FRAMEWORK = {
     ],
 }
 
-
+RQ_QUEUES = {
+    'default': { # Default queue for generic tasks
+        'HOST': '192.168.1.86',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 360,
+    },
+    'inbound': { # Handles inbound emails
+        'HOST': '192.168.1.86',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 180,
+    },
+    'outbound': { # Handles Outbound emails
+        'HOST': '192.168.1.86',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 180,
+    },
+    'sync': { # Mailbox Sync for generic tasks
+        'HOST': '192.168.1.86',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 600,
+    },
+    'notifications': { # Handles notifications both push notifications, emails or internal slack notifications
+        'HOST': '192.168.1.86',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 120,
+    },
+    'analytics': { # Handles analytics tasks 
+        'HOST': '192.168.1.86',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 900,
+    },
+}
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "PostFach API",

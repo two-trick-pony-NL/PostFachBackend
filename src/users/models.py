@@ -37,3 +37,12 @@ class Contact(models.Model):
             if display_name:
                 self.display_name = display_name
         super().save(*args, **kwargs)
+        
+        
+        
+        
+
+class DummyModel(models.Model):
+    class Meta:
+        verbose_name = "RQ Dashboard"
+        verbose_name_plural = "RQ Dashboard"
