@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 import dj_database_url
 import os
 from supabase import create_client
+import certifi
+import ssl
 
 load_dotenv()
 
@@ -32,6 +34,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+APPEND_SLASH = True
 
 ALLOWED_HOSTS = []
 
@@ -69,12 +72,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_cryptography',
+    'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
     'rest_framework',
     'drf_spectacular',
     "django_rq",
     'users',
     'emails',
     'email_integrations',
+    'search',
 ]
 
 MIDDLEWARE = [
@@ -147,12 +153,6 @@ RQ_QUEUES = {
         'DB': 0,
         'DEFAULT_TIMEOUT': 360,
     },
-    'inbound': { # Handles inbound emails
-        'HOST': '192.168.1.86',
-        'PORT': 6379,
-        'DB': 0,
-        'DEFAULT_TIMEOUT': 180,
-    },
     'outbound': { # Handles Outbound emails
         'HOST': '192.168.1.86',
         'PORT': 6379,
@@ -178,6 +178,13 @@ RQ_QUEUES = {
         'DEFAULT_TIMEOUT': 900,
     },
 }
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': ['http://192.168.1.86:9200'],
+    },
+}
+
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "PostFach API",

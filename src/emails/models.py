@@ -2,6 +2,8 @@ from django.db import models
 from users.models import UserProfile, Contact
 import uuid
 from email.utils import parseaddr
+import bleach
+
 
 class EmailThread(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -18,9 +20,40 @@ class EmailThread(models.Model):
 
 
 class Email(models.Model):
+    DIRECTION_CHOICES = [
+        ("IN", "Incoming"),
+        ("OUT", "Outgoing"),
+        
+        
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+        ('received', 'Received'),
+        ('queued', 'Queued'),
+        ('draft', 'Draft'),
+        ('archived', 'Archived'),
+        ('trashed', 'Trashed'),
+        ('snoozed', 'Snoozed'),
+    ]
+
     id = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False,
         help_text="Unique identifier for this email"
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='received',
+        help_text="Status of the email"
+    )
+    direction = models.CharField(
+        max_length=3,
+        choices=DIRECTION_CHOICES,
+        default="IN",
+        help_text="Direction of the email relative to the user"
     )
     thread = models.ForeignKey(
         EmailThread,
@@ -51,15 +84,23 @@ class Email(models.Model):
         help_text="Sender contact linked to this email"
     )
 
-    to_emails = models.TextField(
-        blank=True,
-        help_text="Raw string of recipient emails"
-    )
     to_contacts = models.ManyToManyField(
         Contact,
         related_name='received_emails',
         blank=True,
-        help_text="Linked recipient contacts"
+        help_text="Linked 'To' recipient contacts"
+    )
+    cc_contacts = models.ManyToManyField(
+        Contact,
+        related_name='cced_emails',
+        blank=True,
+        help_text="Linked 'CC' recipient contacts"
+    )
+    bcc_contacts = models.ManyToManyField(
+        Contact,
+        related_name='bcced_emails',
+        blank=True,
+        help_text="Linked 'BCC' recipient contacts"
     )
 
     message_id = models.CharField(
@@ -107,6 +148,19 @@ class Email(models.Model):
         auto_now=True,
         help_text="Timestamp when this record was last updated"
     )
+    is_archived = models.BooleanField(default=False)
+    is_snoozed = models.BooleanField(default=False)
+    snoozed_until = models.DateTimeField(blank=True, null=True)
+    is_pinned = models.BooleanField(default=False)   # optional, like "Pin to top"
+    is_replied = models.BooleanField(default=False)  # optional, for UX
+    is_draft = models.BooleanField(default=False)    
+    
+    def sanitized_html_body(self):
+        allowed_tags = ['p', 'b', 'i', 'u', 'a', 'br', 'ul', 'ol', 'li', 'strong', 'em']
+        allowed_attrs = {
+            'a': ['href', 'title', 'rel'],
+        }
+        return bleach.clean(self.html_body or '', tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
 
     def __str__(self):

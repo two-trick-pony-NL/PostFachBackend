@@ -15,17 +15,17 @@ class EmailInThreadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Email
         fields = [
-            'id', 'from_email', 'subject', 'body', 'html_body',
+            'id', 'from_email', 'subject', 'body', 'sanitized_html_body',
             'is_read', 'is_starred', 'received_at'
         ]
 
 
 class EmailThreadSerializer(serializers.ModelSerializer):
-    emails = EmailInThreadSerializer(many=True, read_only=True)
+    #emails = EmailInThreadSerializer(many=True, read_only=True)
 
     class Meta:
         model = EmailThread
-        fields = ['id', 'subject', 'created_at', 'emails']
+        fields = ['id', 'subject', 'created_at']
 
 
 class EmailSerializer(serializers.ModelSerializer):
@@ -34,21 +34,39 @@ class EmailSerializer(serializers.ModelSerializer):
     attachments = EmailAttachmentSerializer(many=True, read_only=True)
     thread = EmailThreadSerializer(read_only=True)
 
-    # Fields allowed to update
+    # Updatable fields
     is_read = serializers.BooleanField(required=False)
     is_starred = serializers.BooleanField(required=False)
+    is_archived = serializers.BooleanField(required=False)
+    is_snoozed = serializers.BooleanField(required=False)
+    snoozed_until = serializers.DateTimeField(required=False, allow_null=True)
+    is_trashed = serializers.BooleanField(required=False)
+    is_pinned = serializers.BooleanField(required=False)
 
     class Meta:
         model = Email
         fields = [
-            'id', 'thread', 'owner', 'from_email', 'from_contact', 'to_emails', 'to_contacts',
-            'message_id', 'in_reply_to', 'subject', 'body', 'html_body',
+            'id', 'status', 'thread', 'direction', 'owner', 'from_email', 'from_contact', 'to_contacts',
+            'message_id', 'in_reply_to', 'subject', 'body', 'sanitized_html_body',
             'is_read', 'is_starred',
+            'is_archived', 'is_snoozed', 'snoozed_until',
+            'is_trashed', 'is_pinned',
             'received_at', 'created_at', 'updated_at',
             'attachments',
         ]
         read_only_fields = [
-            'id', 'owner', 'from_email', 'from_contact', 'to_emails', 'to_contacts',
-            'message_id', 'in_reply_to', 'subject', 'body', 'html_body',
+            'id', 'status', 'owner', 'direction', 'from_email', 'from_contact', 'to_contacts',
+            'message_id', 'in_reply_to', 'subject', 'body', 'sanitized_html_body',
             'received_at', 'created_at', 'updated_at', 'attachments', 'thread',
         ]
+
+class SendEmailSerializer(serializers.Serializer):
+    integration_id = serializers.UUIDField()
+    to_emails = serializers.ListField(
+        child=serializers.EmailField(),
+        allow_empty=False
+    )
+    subject = serializers.CharField()
+    body_text = serializers.CharField()
+    body_html = serializers.CharField(required=False, allow_blank=True)
+    from_name = serializers.CharField(required=False, allow_blank=True)

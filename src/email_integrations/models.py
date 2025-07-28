@@ -2,6 +2,8 @@ from django.db import models
 from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField
 import uuid
 from users.models import UserProfile
+from django.core.validators import MinValueValidator
+from django_rq import get_scheduler
 
 class BaseEmailIntegration(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -43,6 +45,7 @@ class ImapIntegration(BaseEmailIntegration):
     username = EncryptedCharField(max_length=255)
     password = EncryptedCharField(max_length=255)
     use_ssl = models.BooleanField(default=True)
+    refresh_interval_seconds = models.PositiveIntegerField(default=900, validators=[MinValueValidator(600, message="Minimum is 600 seconds (10 minutes)")])  # Default to 15 minutes
 
     # SMTP connection
     smtp_server = EncryptedCharField(max_length=255)
@@ -53,3 +56,20 @@ class ImapIntegration(BaseEmailIntegration):
 
     def __str__(self):
         return f"IMAP/SMTP: {self.email} @ {self.server}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from email_integrations.rescheduler import reschedule_updated_imap_integration
+        reschedule_updated_imap_integration(self)
+    
+    def delete(self, *args, **kwargs):
+        scheduler = get_scheduler('sync')
+        job_id = f"imap_fetch_{self.id}"
+        job = None
+        for j in scheduler.get_jobs():
+            if j.id == job_id:
+                job = j
+                break
+        if job:
+            scheduler.cancel(job)
+        super().delete(*args, **kwargs)
