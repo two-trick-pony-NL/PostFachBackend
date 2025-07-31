@@ -48,18 +48,18 @@ SUPABASE_JWKS_URL = os.getenv("SUPABASE_JWKS_URL")
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 # Sign in user (email + password)
-# response = supabase.auth.sign_in_with_password({
-#     "email": "peter@petervandoorn.com",
-#     "password": os.environ["TEST_USER_PASSWORD"]
-# })
+response = supabase.auth.sign_in_with_password({
+    "email": "peter@petervandoorn.com",
+    "password": os.environ["TEST_USER_PASSWORD"]
+})
 
-# if response.user:
-#     jwt_token = response.session.access_token
-#     print("Authenticated successfully!\n\n")
-#     print("Bearer", jwt_token)
-#     print("\n\n")    
-# else:
-#     print("Failed to authenticate:", response)
+if response.user:
+    jwt_token = response.session.access_token
+    print("Authenticated successfully!\n\n")
+    print("Bearer", jwt_token)
+    print("\n\n")    
+else:
+    print("Failed to authenticate:", response)
 
 
 # Application definition
@@ -72,8 +72,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_cryptography',
-    'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
+    #'django_elasticsearch_dsl',
+    #'django_elasticsearch_dsl_drf',
     'rest_framework',
     'drf_spectacular',
     "django_rq",
@@ -179,11 +179,6 @@ RQ_QUEUES = {
     },
 }
 
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': ['http://192.168.1.86:9200'],
-    },
-}
 
 
 SPECTACULAR_SETTINGS = {

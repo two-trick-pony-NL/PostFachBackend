@@ -3,6 +3,8 @@ from users.models import UserProfile, Contact
 import uuid
 from email.utils import parseaddr
 import bleach
+from django.utils import timezone
+
 
 
 class EmailThread(models.Model):
@@ -167,13 +169,36 @@ class Email(models.Model):
         return f"Email: {self.subject} ({self.id})"
 
 
+
 class EmailAttachment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.ForeignKey(Email, on_delete=models.CASCADE, related_name='attachments')
+    owner = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='email_attachments')
+    email = models.ForeignKey('Email', on_delete=models.CASCADE, related_name='attachments')
     filename = models.CharField(max_length=255)
     mime_type = models.CharField(max_length=100)
     size = models.PositiveIntegerField(help_text="Size in bytes")
     url = models.URLField(blank=True, null=True, help_text="Link to the attachment file")
+    file = models.FileField(upload_to='attachments/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    public_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, help_text="Public token for accessing this attachment")
+    public_token_created = models.DateTimeField(auto_now_add=True)
+    download_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.filename
+    
+    @property
+    def share_url(self):
+        user_id = str(self.email.owner.id)
+        return f"/api/emails/attachments/shared/{user_id}-{self.public_token}/"
+    
+    @property
+    def share_url_expiry(self):
+        return self.public_token_created + timezone.timedelta(days=7)
+
+    def rotate_token(self): #Rotates the public token and resets the download count
+        self.public_token = uuid.uuid4()
+        self.public_token_created = timezone.now()
+        self.download_count = 0
+        self.save(update_fields=['public_token', 'public_token_created', 'download_count'])

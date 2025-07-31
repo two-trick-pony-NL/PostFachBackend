@@ -3,12 +3,44 @@
 from rest_framework import serializers
 from .models import Email, EmailThread, Contact, EmailAttachment
 from users.serializers import ContactSerializer
+from rest_framework.reverse import reverse
+
 
 
 class EmailAttachmentSerializer(serializers.ModelSerializer):
+    private_file_url = serializers.SerializerMethodField()
+    share_url = serializers.SerializerMethodField()  # changed here
+    share_url_expiry = serializers.ReadOnlyField()
+
     class Meta:
         model = EmailAttachment
-        fields = ['id', 'filename', 'mime_type', 'size', 'url']
+        fields = [
+            'id',
+            'filename',
+            'mime_type',
+            'size',
+            'download_count',
+            'share_url_expiry',
+            'created_at',
+            'updated_at',
+            'share_url',
+            'private_file_url',
+        ]
+
+    def get_private_file_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return reverse('attachment-download', kwargs={'id': obj.id}, request=request)
+        return None
+
+    def get_share_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            base_url = f"{request.scheme}://{request.get_host()}"
+            return f"{base_url}{obj.share_url}"
+        return None
+
+
 
 
 class EmailInThreadSerializer(serializers.ModelSerializer):
@@ -21,11 +53,11 @@ class EmailInThreadSerializer(serializers.ModelSerializer):
 
 
 class EmailThreadSerializer(serializers.ModelSerializer):
-    #emails = EmailInThreadSerializer(many=True, read_only=True)
+    emails = EmailInThreadSerializer(many=True, read_only=True)
 
     class Meta:
         model = EmailThread
-        fields = ['id', 'subject', 'created_at']
+        fields = ['id', 'subject', 'created_at', 'emails']
 
 
 class EmailSerializer(serializers.ModelSerializer):
@@ -42,6 +74,7 @@ class EmailSerializer(serializers.ModelSerializer):
     snoozed_until = serializers.DateTimeField(required=False, allow_null=True)
     is_trashed = serializers.BooleanField(required=False)
     is_pinned = serializers.BooleanField(required=False)
+    
 
     class Meta:
         model = Email

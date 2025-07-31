@@ -1,16 +1,18 @@
 from rest_framework import generics, permissions
-from .models import Email, EmailThread
-from .serializers import EmailSerializer, EmailThreadSerializer, SendEmailSerializer
-from users.models import UserProfile
+from django.http import FileResponse, Http404 
+from .models import Email, EmailThread, EmailAttachment
+from .serializers import EmailSerializer, EmailThreadSerializer, SendEmailSerializer, EmailAttachmentSerializer
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
 from email_integrations.tasks import send_email_task
 from email_integrations.models import ImapIntegration
 import django_rq
 import uuid
 from django.utils.timezone import now
-from users.models import Contact
-
+from users.models import Contact, UserProfile
+from django.utils import timezone
+from datetime import timedelta
 
 class EmailListView(generics.ListAPIView):
     serializer_class = EmailSerializer
@@ -131,3 +133,66 @@ class SendEmailView(generics.GenericAPIView):
         )
 
         return Response({"status": "Email queued for sending", "email_id": str(email_obj.id)}, status=status.HTTP_202_ACCEPTED)
+    
+class EmailAttachmentListView(generics.ListAPIView):
+    serializer_class = EmailAttachmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user_profile = UserProfile.objects.get(id=self.request.user.id)
+        return EmailAttachment.objects.filter(email__owner=user_profile).select_related('email').order_by('-created_at')
+
+
+class EmailAttachmentDetailView(generics.RetrieveAPIView):
+    serializer_class = EmailAttachmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        user_profile = UserProfile.objects.get(id=self.request.user.id)
+        return EmailAttachment.objects.filter(email__owner=user_profile).select_related('email')
+    
+class EmailAttachmentDownloadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, id):
+        try:
+            user_profile = UserProfile.objects.get(id=request.user.id)
+            attachment = EmailAttachment.objects.get(id=id, email__owner=user_profile)
+
+            if not attachment.file:
+                raise Http404("No file found on this attachment.")
+
+            return FileResponse(attachment.file.open('rb'), as_attachment=True, filename=attachment.filename)
+        except EmailAttachment.DoesNotExist:
+            raise Http404("Attachment not found.")
+        
+
+
+
+def EmailAttachmentPublicDownloadView(request, token):
+    user_uuid = token[:36]
+    public_token = token[37:]
+    user = UserProfile.objects.get(pk=user_uuid)
+    attachment = EmailAttachment.objects.get(owner=user, public_token=public_token)
+    
+    if not attachment:
+        raise Http404("Attachment not found or invalid token.")
+
+    now = timezone.now()
+
+    if now - attachment.public_token_created > timedelta(days=7):
+        attachment.rotate_token()
+        raise Http404("Link expired")
+
+    if attachment.download_count >= 5:
+        attachment.rotate_token()
+        raise Http404("Download limit reached")
+
+    attachment.download_count += 1
+    attachment.save(update_fields=['download_count'])
+
+    if not attachment.file:
+        raise Http404("No file found on this attachment.")
+
+    return FileResponse(attachment.file.open('rb'), as_attachment=True, filename=attachment.filename)
